@@ -211,7 +211,8 @@ class RecipeCreateUpdateSerializer(ModelSerializer):
         if duplicate_tags:
             raise ValidationError(
                 {
-                    "tags": "Теги должны быть уникальными! Обнаружены повторяющиеся теги: "
+                    "tags": "Теги должны быть уникальными! Обнаружены "
+                            "повторяющиеся теги: "
                     + ", ".join(duplicate_tags)
                 }
             )
