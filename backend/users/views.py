@@ -4,14 +4,13 @@ from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
 from rest_framework.permissions import (IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 
-from api.paginations import CustomPageNumberPagination
 from api.serializers import CustomUserSerializer, SubscribeSerializer
 
-from .exceptions import CustomDeleteError
 from .models import Subscribe
 
 User = get_user_model()
@@ -20,7 +19,6 @@ User = get_user_model()
 class CustomUserViewSet(UserViewSet):
     queryset = User.objects.all()
     serializer_class = CustomUserSerializer
-    pagination_class = CustomPageNumberPagination
     permission_classes = (IsAuthenticatedOrReadOnly,)
 
     @action(
@@ -49,7 +47,7 @@ class CustomUserViewSet(UserViewSet):
                 subscription.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
             except Http404:
-                raise CustomDeleteError()
+                raise NotFound("Подписка не найдена")
 
     @action(detail=False, permission_classes=[IsAuthenticated])
     def subscriptions(self, request):

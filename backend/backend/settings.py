@@ -3,13 +3,12 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = (
-    "django-insecure-68!2c$k0a^l6169l(aughrv%o4as3lsi0y5j)^$rvte-1+a#mg"
-)
 
-DEBUG = True
+SECRET_KEY = os.getenv("SECRET_KEY", "_")
 
-ALLOWED_HOSTS = []
+DEBUG = os.getenv("DEBUG", "False")
+
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -63,7 +62,7 @@ DATABASES = {
         "NAME": os.getenv("POSTGRES_DB", "django"),
         "USER": os.getenv("POSTGRES_USER", "django"),
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
-        "HOST": os.getenv("DB_HOST", ""),
+        "HOST": os.getenv("DB_HOST", "localhost "),
         "PORT": os.getenv("DB_PORT", 5432),
     }
 }
@@ -116,4 +115,4 @@ DJOSER = {
 }
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+MEDIA_ROOT = BASE_DIR / "media"
