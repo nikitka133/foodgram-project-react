@@ -28,11 +28,9 @@ def get_shopping_list(user):
         ]
     )
 
-    filename = f"{user.username}_cart.txt"
     content_type = "text/plain"
 
     buffer = io.BytesIO(ingredients_list.encode("utf-8"))
     response = FileResponse(buffer, content_type=content_type)
-    response["Content-Disposition"] = f"attachment; filename={filename}"
 
     return response

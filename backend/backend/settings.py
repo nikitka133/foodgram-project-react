@@ -6,7 +6,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY", "_")
 
-DEBUG = os.getenv("DEBUG", "False")
+DEBUG = os.getenv("DEBUG") == "True"
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 
@@ -62,7 +62,7 @@ DATABASES = {
         "NAME": os.getenv("POSTGRES_DB", "django"),
         "USER": os.getenv("POSTGRES_USER", "django"),
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
-        "HOST": os.getenv("DB_HOST", "localhost "),
+        "HOST": os.getenv("DB_HOST", "localhost"),
         "PORT": os.getenv("DB_PORT", 5432),
     }
 }

@@ -4,7 +4,11 @@ from django.shortcuts import get_object_or_404
 from djoser.serializers import UserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework.exceptions import ValidationError
-from rest_framework.fields import IntegerField, SerializerMethodField
+from rest_framework.fields import (
+    BooleanField,
+    IntegerField,
+    SerializerMethodField,
+)
 from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.serializers import ModelSerializer
 
@@ -91,8 +95,8 @@ class RecipeGetSerializer(ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     author = CustomUserSerializer(read_only=True)
     image = Base64ImageField()
-    is_favorited = SerializerMethodField(read_only=True)
-    is_in_shopping_cart = SerializerMethodField(read_only=True)
+    is_favorited = BooleanField(read_only=True)
+    is_in_shopping_cart = BooleanField(read_only=True)
     ingredients = IngredientSerializer(many=True)
 
     class Meta:
@@ -108,20 +112,6 @@ class RecipeGetSerializer(ModelSerializer):
             "image",
             "text",
             "cooking_time",
-        )
-
-    def get_is_favorited(self, obj):
-        user = self.context.get("request").user
-        return (
-            not user.is_anonymous
-            and user.favorites.filter(recipe=obj).exists()
-        )
-
-    def get_is_in_shopping_cart(self, obj):
-        user = self.context.get("request").user
-        return (
-            not user.is_anonymous
-            and user.shopping_cart.filter(recipe=obj).exists()
         )
 
 

@@ -1,3 +1,4 @@
+from django.db.models import Exists, OuterRef
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
@@ -11,9 +12,13 @@ from recipes.models import Favourite, Ingredient, Recipe, ShoppingCart, Tag
 from .filters import IngredientFilter, RecipeFilter
 from .paginations import CustomPagination
 from .permissions import IsAdminOrReadOnly, IsAuthorOrReadOnly
-from .serializers import (IngredientSerializer, RecipeCreateUpdateSerializer,
-                          RecipeGetSerializer, RecipeShortSerializer,
-                          TagSerializer)
+from .serializers import (
+    IngredientSerializer,
+    RecipeCreateUpdateSerializer,
+    RecipeGetSerializer,
+    RecipeShortSerializer,
+    TagSerializer,
+)
 from .services import get_shopping_list
 
 
@@ -28,27 +33,20 @@ class RecipeViewSet(ModelViewSet):
         serializer.save(author=self.request.user)
 
     def get_queryset(self):
-        recipes = Recipe.objects.prefetch_related().all()
-        return recipes
+        user = self.request.user
 
-    # Подскажите пожалуйста :(
-    # def get_queryset(self):
-    #     user = self.request.user
-    #
-    #     is_favourited_subquery = Favourite.objects.filter(
-    #         user=user,
-    #         recipe=OuterRef('pk')
-    #     )
-    #     is_in_shopping_cart_subquery = ShoppingCart.objects.filter(
-    #         user=user,
-    #         recipe=OuterRef('pk')
-    #     )
-    #
-    #     queryset = Recipe.objects.annotate(
-    #         is_favourited=Exists(is_favourited_subquery),
-    #         is_in_shopping_cart=Exists(is_in_shopping_cart_subquery)
-    #     )
-    #     return queryset
+        is_favourited_subquery = Favourite.objects.filter(
+            user=user, recipe=OuterRef("pk")
+        )
+        is_in_shopping_cart_subquery = ShoppingCart.objects.filter(
+            user=user, recipe=OuterRef("pk")
+        )
+
+        queryset = Recipe.objects.annotate(
+            is_favorited=Exists(is_favourited_subquery),
+            is_in_shopping_cart=Exists(is_in_shopping_cart_subquery),
+        )
+        return queryset
 
     def get_serializer_class(self):
         if self.request.method in SAFE_METHODS:
@@ -96,7 +94,10 @@ class RecipeViewSet(ModelViewSet):
     @action(detail=False, permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
         user = request.user
-        return get_shopping_list(user)
+        response = get_shopping_list(user)
+        filename = f"{user.username}_cart.txt"
+        response["Content-Disposition"] = f"attachment; filename={filename}"
+        return response
 
 
 class IngredientViewSet(ReadOnlyModelViewSet):
