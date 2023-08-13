@@ -1,11 +1,9 @@
 import io
 
 from django.db.models import Sum
-from django.http import FileResponse
+from recipes.models import RecipeIngredient
 from rest_framework.response import Response
 from rest_framework.status import HTTP_404_NOT_FOUND
-
-from recipes.models import RecipeIngredient
 
 
 def get_shopping_list(user):
@@ -28,9 +26,6 @@ def get_shopping_list(user):
         ]
     )
 
-    content_type = "text/plain"
-
     buffer = io.BytesIO(ingredients_list.encode("utf-8"))
-    response = FileResponse(buffer, content_type=content_type)
 
-    return response
+    return buffer

@@ -1,13 +1,13 @@
 from django.db.models import Exists, OuterRef
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from recipes.models import Favourite, Ingredient, Recipe, ShoppingCart, Tag
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
-
-from recipes.models import Favourite, Ingredient, Recipe, ShoppingCart, Tag
 
 from .filters import IngredientFilter, RecipeFilter
 from .paginations import CustomPagination
@@ -33,20 +33,25 @@ class RecipeViewSet(ModelViewSet):
         serializer.save(author=self.request.user)
 
     def get_queryset(self):
-        user = self.request.user
+        if self.request.user.is_authenticated:
+            user = self.request.user
 
-        is_favourited_subquery = Favourite.objects.filter(
-            user=user, recipe=OuterRef("pk")
-        )
-        is_in_shopping_cart_subquery = ShoppingCart.objects.filter(
-            user=user, recipe=OuterRef("pk")
-        )
+            is_favourited_subquery = Favourite.objects.filter(
+                user=user, recipe=OuterRef("pk")
+            )
+            is_in_shopping_cart_subquery = ShoppingCart.objects.filter(
+                user=user, recipe=OuterRef("pk")
+            )
 
-        queryset = Recipe.objects.annotate(
-            is_favorited=Exists(is_favourited_subquery),
-            is_in_shopping_cart=Exists(is_in_shopping_cart_subquery),
-        )
-        return queryset
+            queryset = (
+                Recipe.objects.annotate(
+                    is_favorited=Exists(is_favourited_subquery),
+                    is_in_shopping_cart=Exists(is_in_shopping_cart_subquery),
+                )
+                .select_related("author")
+                .prefetch_related("tags")
+            )
+            return queryset
 
     def get_serializer_class(self):
         if self.request.method in SAFE_METHODS:
@@ -93,8 +98,10 @@ class RecipeViewSet(ModelViewSet):
 
     @action(detail=False, permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
+        content_type = "text/plain"
         user = request.user
-        response = get_shopping_list(user)
+        buffer = get_shopping_list(user)
+        response = FileResponse(buffer, content_type=content_type)
         filename = f"{user.username}_cart.txt"
         response["Content-Disposition"] = f"attachment; filename={filename}"
         return response

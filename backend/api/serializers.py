@@ -1,24 +1,20 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-from djoser.serializers import UserSerializer
+from djoser.serializers import UserSerializer as DjoserUserSerialiser
 from drf_extra_fields.fields import Base64ImageField
+from recipes.models import Ingredient, Recipe, RecipeIngredient, Tag
+from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.fields import (
-    BooleanField,
-    IntegerField,
-    SerializerMethodField,
-)
+from rest_framework.fields import BooleanField, SerializerMethodField
 from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.serializers import ModelSerializer
-
-from recipes.models import Ingredient, Recipe, RecipeIngredient, Tag
 from users.models import Subscribe
 
 User = get_user_model()
 
 
-class CustomUserSerializer(UserSerializer):
+class CustomUserSerializer(DjoserUserSerialiser):
     is_subscribed = SerializerMethodField(read_only=True)
 
     class Meta:
@@ -85,6 +81,23 @@ class IngredientSerializer(ModelSerializer):
         fields = ("id", "name", "measurement_unit")
 
 
+class RecipeIngredientGetSerializer(ModelSerializer):
+    id = serializers.IntegerField(source="ingredient.id")
+    name = serializers.CharField(source="ingredient.name", read_only=True)
+    measurement_unit = serializers.CharField(
+        source="ingredient.measurement_unit", read_only=True
+    )
+
+    class Meta:
+        model = RecipeIngredient
+        fields = (
+            "id",
+            "name",
+            "measurement_unit",
+            "amount",
+        )
+
+
 class TagSerializer(ModelSerializer):
     class Meta:
         model = Tag
@@ -95,9 +108,11 @@ class RecipeGetSerializer(ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     author = CustomUserSerializer(read_only=True)
     image = Base64ImageField()
-    is_favorited = BooleanField(read_only=True)
+    is_favorited = BooleanField(read_only=True, default=False)
     is_in_shopping_cart = BooleanField(read_only=True)
-    ingredients = IngredientSerializer(many=True)
+    ingredients = RecipeIngredientGetSerializer(
+        many=True, read_only=True, source="recipe_ingredients"
+    )
 
     class Meta:
         model = Recipe
@@ -113,14 +128,6 @@ class RecipeGetSerializer(ModelSerializer):
             "text",
             "cooking_time",
         )
-
-
-class RecipeIngredientGetSerializer(ModelSerializer):
-    id = IntegerField(write_only=True)
-
-    class Meta:
-        model = RecipeIngredient
-        fields = ("id", "amount")
 
 
 class RecipeCreateUpdateSerializer(ModelSerializer):
@@ -152,10 +159,12 @@ class RecipeCreateUpdateSerializer(ModelSerializer):
         errors = []
 
         for item in value:
-            ingredient = get_object_or_404(Ingredient, id=item["id"])
+            ingredient = get_object_or_404(
+                Ingredient, id=item["ingredient"]["id"]
+            )
 
             if ingredient in ingredients_list:
-                errors.append({"ingredients": ["не должны повторяться"]})
+                errors.append({"ingredient": ["не должны повторяться"]})
 
             if int(item["amount"]) <= 0:
                 errors.append({"amount": ["Минимальное количество 1"]})
@@ -187,7 +196,9 @@ class RecipeCreateUpdateSerializer(ModelSerializer):
 
     @transaction.atomic
     def create_ingredients_amounts(self, ingredients, recipe):
-        ingredient_ids = [ingredient["id"] for ingredient in ingredients]
+        ingredient_ids = [
+            ingredient["ingredient"]["id"] for ingredient in ingredients
+        ]
         existing_ingredients = Ingredient.objects.filter(id__in=ingredient_ids)
 
         ingredient_objs = [
@@ -197,7 +208,7 @@ class RecipeCreateUpdateSerializer(ModelSerializer):
                 amount=next(
                     item["amount"]
                     for item in ingredients
-                    if item["id"] == ingredient.id
+                    if item["ingredient"]["id"] == ingredient.id
                 ),
             )
             for ingredient in existing_ingredients
