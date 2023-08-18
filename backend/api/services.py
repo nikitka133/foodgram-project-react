@@ -1,7 +1,11 @@
 import io
+import json
+import os
 
+from django.db import transaction
 from django.db.models import Sum
-from recipes.models import RecipeIngredient
+from recipes.models import Ingredient, RecipeIngredient
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.status import HTTP_404_NOT_FOUND
 
@@ -29,3 +33,37 @@ def get_shopping_list(user):
     buffer = io.BytesIO(ingredients_list.encode("utf-8"))
 
     return buffer
+
+
+def import_data_from_csv():
+    filename = "ingredients.json"
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(current_path, "..", "data", filename)
+
+    with open(file_path, "r", encoding="UTF-8") as f:
+        data = json.load(f)
+        new_data = []
+
+        for item in data:
+            name = item["name"]
+            measurement_unit = item["measurement_unit"]
+
+            if not Ingredient.objects.filter(
+                name=name, measurement_unit=measurement_unit
+            ).exists():
+                new_data.append(
+                    Ingredient(name=name, measurement_unit=measurement_unit)
+                )
+
+        if new_data:
+            with transaction.atomic():
+                Ingredient.objects.bulk_create(new_data)
+            return Response(
+                {"message": f"Добавлено ингредиентов: {len(new_data)}"},
+                status=status.HTTP_201_CREATED,
+            )
+        else:
+            return Response(
+                {"message": "Нет ингредиентов для испорта"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )

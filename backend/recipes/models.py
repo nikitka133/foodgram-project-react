@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.core.validators import MinValueValidator, RegexValidator
+from django.core.validators import RegexValidator
 from django.db import models
 
 User = get_user_model()
@@ -26,7 +26,6 @@ class Recipe(models.Model):
     )
     cooking_time = models.PositiveSmallIntegerField(
         "Время приготовления",
-        validators=[MinValueValidator(1, message="Минимальное время 1")],
     )
     image = models.ImageField("Изображение", upload_to="img/")
 
@@ -90,7 +89,6 @@ class RecipeIngredient(models.Model):
     )
     amount = models.PositiveSmallIntegerField(
         "Количество",
-        validators=[MinValueValidator(1, message="Минимальное количество 1")],
     )
 
     class Meta:

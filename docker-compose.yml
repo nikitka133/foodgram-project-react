@@ -12,7 +12,7 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
   backend:
-    image: nk133/foodgram_backend:latest
+    build: ./backend/
     env_file: .env
     volumes:
       - static:/backend_static
@@ -32,3 +32,5 @@ services:
     volumes:
       - static:/staticfiles/
       - media:/usr/share/nginx/html/media
+    depends_on:
+      - backend

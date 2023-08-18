@@ -5,17 +5,25 @@ from django_filters.rest_framework import DjangoFilterBackend
 from recipes.models import Favourite, Ingredient, Recipe, ShoppingCart, Tag
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
+from rest_framework.permissions import (
+    SAFE_METHODS,
+    IsAdminUser,
+    IsAuthenticated,
+)
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from .filters import IngredientFilter, RecipeFilter
 from .paginations import CustomPagination
 from .permissions import IsAdminOrReadOnly, IsAuthorOrReadOnly
-from .serializers import (IngredientSerializer, RecipeCreateUpdateSerializer,
-                          RecipeGetSerializer, RecipeShortSerializer,
-                          TagSerializer)
-from .services import get_shopping_list
+from .serializers import (
+    IngredientSerializer,
+    RecipeCreateUpdateSerializer,
+    RecipeGetSerializer,
+    RecipeShortSerializer,
+    TagSerializer,
+)
+from .services import get_shopping_list, import_data_from_csv
 
 
 class RecipeViewSet(ModelViewSet):
@@ -109,6 +117,14 @@ class IngredientViewSet(ReadOnlyModelViewSet):
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = IngredientFilter
+
+    @action(
+        detail=False,
+        methods=["get"],
+        permission_classes=[IsAdminUser],
+    )
+    def import_data(self, request):
+        return import_data_from_csv()
 
 
 class TagViewSet(ReadOnlyModelViewSet):
