@@ -64,6 +64,6 @@ def import_data_from_csv():
             )
         else:
             return Response(
-                {"message": "Нет ингредиентов для испорта"},
+                {"message": "Нет ингредиентов для импорта"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
